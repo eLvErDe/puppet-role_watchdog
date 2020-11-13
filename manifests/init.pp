@@ -3,7 +3,7 @@
 #
 # @example role_watchdog
 #   class { 'role_watchdog':
-#     type             => "auto",
+#     type             => "best",
 #     load_per_core_1m => 10,
 #     min_mem_percent  => 10,
 #     files_change      => [['/var/log/syslog', 300]],
