@@ -59,6 +59,14 @@
 #  initial error is still there (e.g: still not enough memory), 0 for
 #  unlimited
 #
+# @param service_start
+#  Start or stop service
+#
+# @param service_enable
+#  Enable or disable service (register at boot), it could be a good option
+#  to leave it to false while testing to avoid being stuck in a never ending
+#  reboot loop
+#
 
 
 class role_watchdog (
@@ -73,6 +81,8 @@ class role_watchdog (
   Optional[Stdlib::Absolutepath] $repair_binary = undef,
   Optional[Integer[0]] $repair_timeout = undef,
   Optional[Integer[0]] $repair_maximum = undef,
+  Boolean $service_start = false,
+  Boolean $service_enable = false,
 
   ) {
 
@@ -218,8 +228,8 @@ class role_watchdog (
 
   # Service
   service { 'watchdog':
-    ensure => 'running',
-    enable => true,
+    ensure => $service_start ? { true => 'running', default    => 'stopped' },
+    enable => $service_enable,
   }
 
 }
