@@ -1,0 +1,104 @@
+#####################################
+# THIS FILE IS UNDER PUPPET CONTROL #
+#      DO NOT EDIT MANUALLY         #
+#####################################
+
+#ping			= 172.31.14.1
+#ping			= 172.26.1.255
+#interface		= eth0
+<% if @files_change -%>
+<% @files_change.each do |file_change| -%>
+file			= <%= file_change[0] %>
+change			= <%= file_change[1] %>
+<% end -%>
+<% else -%>
+#file			= /var/log/messages
+#change			= 1407
+<% end -%>
+
+# Uncomment to enable test. Setting one of these values to '0' disables it.
+# These values will hopefully never reboot your machine during normal use
+# (if your machine is really hung, the loadavg will go much higher than 25)
+<% if @load_per_core_1m -%>
+max-load-1		= <%= @processorcount * @load_per_core_1m %>
+<% else -%>
+#max-load-1		= 25
+<% end -%>
+<% if @load_per_core_5m -%>
+max-load-5		= <%= @processorcount * @load_per_core_5m %>
+<% else -%>
+#max-load-5		= 18
+<% end -%>
+<% if @load_per_core_15m -%>
+max-load-15		= <%= @processorcount * @load_per_core_15m %>
+<% else -%>
+#max-load-15		= 12
+<% end -%>
+
+# Note that this is the number of pages!
+# To get the real size, check how large the pagesize is on your machine.
+#min-memory		= 1
+<% if @min_free_pages -%>
+allocatable-memory	= <%= @min_free_pages %>
+<% else -%>
+#allocatable-memory	= 1
+<% end -%>
+
+<% if @osfamily == 'RedHat' -%>
+# With enforcing SELinux policy please use the /usr/libexec/watchdog/scripts/
+# or /etc/watchdog.d/ for your test-binary and repair-binary configuration.
+<% end -%>
+<% if @repair_binary -%>
+repair-binary		= <%= @repair_binary %>
+<% else -%>
+#repair-binary		= /usr/sbin/repair
+<% end -%>
+<% if not @repair_timeout.nil? -%>
+repair-timeout		= <%= @repair_timeout %>
+<% else -%>
+#repair-timeout		= 60
+<% end -%>
+#test-binary		=
+#test-timeout		= 60
+
+# The retry-timeout and repair limit are used to handle errors in a more robust
+# manner. Errors must persist for longer than retry-timeout to action a repair
+# or reboot, and if repair-maximum attempts are made without the test passing a
+# reboot is initiated anyway.
+#retry-timeout		= 60
+<% if not @repair_maximum.nil? -%>
+repair-maximum		= <%= @repair_maximum %>
+<% else -%>
+#repair-maximum		= 1
+<% end -%>
+
+watchdog-device		= /dev/watchdog
+# Restart after NN seconds (watchdog reaches zero)
+watchdog-timeout	= <%= @watchdog_timeout %>
+
+# Defaults compiled into the binary
+#temperature-sensor	=
+#max-temperature	= 90
+
+# Defaults compiled into the binary
+#admin			= root
+#interval		= 1
+#logtick                = 1
+#log-dir		= /var/log/watchdog
+
+# This greatly decreases the chance that watchdog won't be scheduled before
+# your machine is really loaded
+realtime		= yes
+priority		= 1
+
+<% if @osfamily == 'RedHat' -%>
+# When using custom service pid check with custom service
+# systemd unit file please be aware the "Requires="
+# does dependent service deactivation.
+# Using "Before=watchdog.service" or "Before=watchdog-ping.service"
+# in the custom service unit file may be the desired operation instead.
+# See man 5 systemd.unit for more details.
+#
+<% end -%>
+# Check if rsyslogd is still running by enabling the following line
+#pidfile		= /var/run/rsyslogd.pid

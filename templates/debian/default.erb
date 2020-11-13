@@ -1,0 +1,12 @@
+#####################################
+# THIS FILE IS UNDER PUPPET CONTROL #
+#      DO NOT EDIT MANUALLY         #
+#####################################
+
+# Start watchdog at boot time? 0 or 1
+run_watchdog=1
+# Start wd_keepalive after stopping watchdog? 0 or 1
+run_wd_keepalive=1
+# Load module before starting watchdog
+watchdog_module="<%= @module_to_load ? @module_to_load : "none" %>"
+# Specify additional watchdog options here (see manpage).
