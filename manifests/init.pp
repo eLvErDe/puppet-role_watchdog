@@ -67,6 +67,14 @@
 #  to leave it to false while testing to avoid being stuck in a never ending
 #  reboot loop
 #
+# @param override_pagesize
+#  It seems on non X86 architectures, watchdog is buggy and does not detect
+#  system page size correctly, I openeded a bug at Debian to see what people
+#  think: https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=975032
+#  If such error occurs (be carefull on arm64), use this parameter to force
+#  system pagefile to a different value (check watchdog daemon logs to see
+#  what value it uses)
+#
 
 
 class role_watchdog (
@@ -83,6 +91,7 @@ class role_watchdog (
   Optional[Integer[0]] $repair_maximum = undef,
   Boolean $service_start = false,
   Boolean $service_enable = false,
+  Optional[Integer[1]] $override_pagesize = undef,
 
   ) {
 
@@ -216,7 +225,11 @@ class role_watchdog (
   # Compute total memory in bytes
   if ($min_mem_percent) {
     $min_free_mem_bytes = Integer($::memory['system']['total_bytes'] * $min_mem_percent / 100)
-    $min_free_pages = Integer($min_free_mem_bytes / $::default_page_size)
+    if ($override_pagesize) {
+        $min_free_pages = Integer($min_free_mem_bytes / $override_pagesize)
+    } else {
+        $min_free_pages = Integer($min_free_mem_bytes / $::default_page_size)
+    }
   }
 
   # Main configuration file
