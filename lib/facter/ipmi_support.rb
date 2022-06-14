@@ -1,4 +1,5 @@
 Facter.add('ipmi_support') do
+  confine :kernel => 'Linux'
   setcode do
     if Facter.value(:is_virtual)
       false
