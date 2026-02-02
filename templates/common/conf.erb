@@ -20,17 +20,17 @@ change			= <%= file_change[1] %>
 # These values will hopefully never reboot your machine during normal use
 # (if your machine is really hung, the loadavg will go much higher than 25)
 <% if @load_per_core_1m -%>
-max-load-1		= <%= @processorcount * @load_per_core_1m %>
+max-load-1		= <%= @cores_count * @load_per_core_1m %>
 <% else -%>
 #max-load-1		= 25
 <% end -%>
 <% if @load_per_core_5m -%>
-max-load-5		= <%= @processorcount * @load_per_core_5m %>
+max-load-5		= <%= @cores_count * @load_per_core_5m %>
 <% else -%>
 #max-load-5		= 18
 <% end -%>
 <% if @load_per_core_15m -%>
-max-load-15		= <%= @processorcount * @load_per_core_15m %>
+max-load-15		= <%= @cores_count * @load_per_core_15m %>
 <% else -%>
 #max-load-15		= 12
 <% end -%>

@@ -85,9 +85,35 @@ class role_watchdog (
   Boolean $service_enable = false,
 
   ) {
+  # Compute a bunch of variables to be compatible with both very old facts and new ones
+  $has_path_fact = ($::facts != undef and $::facts['path'] != undef)
+  $has_is_virtual_fact = ($::facts != undef and $::facts['is_virtual'] != undef)
+  $has_architecture_fact = ($::facts != undef and $::facts['architecture'] != undef)
+  $has_ipmi_support_fact = ($::facts != undef and $::facts['ipmi_support'] != undef)
+  $has_processors_facts = ($::facts != undef and $::facts['processors'] != undef)
+  $has_processors_models_fact = ($has_processors_facts != undef and $::facts['processors']['models'] != undef)
+  $has_processors_cores_fact = ($has_processors_facts != undef and $::facts['processors']['cores'] != undef)
+  $has_memory_facts = ($::facts != undef and $::facts['memory'] != undef)
+  $has_memory_system_facts = ($has_memory_facts != undef and $::facts['memory']['system'] != undef)
+  $has_memory_system_total_bytes_fact = ($has_memory_system_facts != undef and $::facts['memory']['system']['total_bytes'] != undef)
+  $has_os_family_fact = ($::facts != undef and $::facts['os'] != undef and $::facts['os']['family'] != undef)
+  $has_os_hardware_fact = ($::facts != undef and $::facts['os'] != undef and $::facts['os']['hardware'] != undef)
+  $has_os_release_facts = ($::facts != undef and $::facts['os'] != undef and $::facts['os']['release'] != undef)
+  $os_family = $has_os_family_fact ? { false => $::osfamily, default => $::facts['os']['family'] }
+  $os_hardware = $has_os_hardware_fact ? { false => $::osfamily, default => $::facts['os']['hardware'] }
+  $os_distro_release_major = $has_os_release_facts ? { false => $::operatingsystemmajrelease, default => $facts['os']['release']['major'] }
+  $path = $has_path_fact ? { false => $::path, default => $::facts['path'] }
+  $is_virtual = $has_is_virtual_fact ? { false => $::is_virtual, default => $::facts['is_virtual'] }
+  $architecture = $has_os_hardware_fact ? { false => $::hardwaremodel, default => $::facts['os']['hardware'] }
+  $ipmi_support = $has_ipmi_support_fact ? { false => $::ipmi_support, default => $::facts['ipmi_support'] }
+  $processor_0_model = $has_processors_models_fact ? { false => $::processor0, default => $::facts['processors']['models'][0] }
+  $cores_count = $has_processors_cores_fact ? { false => $::processorcount, default => $::facts['processors']['cores'] }
+  $memory_system_total_bytes = $has_memory_system_total_bytes_fact ? { false => $::memory['system']['total_bytes'], default => $::facts['memory']['system']['total_bytes'] }
+
+  # fail("path=${path} is_virtual=${is_virtual} architecture=${architecture} ipmi_support=${ipmi_support} processor_0_model=${processor_0_model} cores_count=${cores_count} memory_system_total_bytes=${memory_system_total_bytes}")
 
   # Ensure dmidecode is preset, otherwise fact detecting IPMI support may fail
-  if (!$::is_virtual and $::hardwaremodel in ['x86_64']) {
+  if (!$is_virtual and $architecture in ['x86_64']) {
     ensure_packages('dmidecode')
   }
 
@@ -97,13 +123,13 @@ class role_watchdog (
   # Configure kernel module to load/blacklist depending
   # on requested type of watchdog
   Exec { 'rmmod-intel-tco-watchdog':
-    path        => $::path,
+    path        => $path,
     command     => 'rmmod iTCO_wdt',
     refreshonly => true,
   }
   # For RedHat only
   Exec { 'load-watchdog-module':
-    path        => $::path,
+    path        => $path,
     command     => 'modprobe `cat /etc/modules-load.d/puppet-load-watchdog.conf`',
     refreshonly => true,
     notify      => Service['watchdog'],
@@ -116,9 +142,9 @@ class role_watchdog (
 
     'best': {
       # IPMI is supported !
-      if ($::ipmi_support) {
+      if ($ipmi_support) {
         # IPMI is supported and CPU is Intel => blacklist TCO
-        if (downcase($::processor0) =~ /^intel/) {
+        if (downcase($processor_0_model) =~ /^intel/) {
           file { '/etc/modprobe.d/puppet-disable-intel-tco-watchdog.conf':
             content => "blacklist iTCO_wdt\n",
             notify  => Exec['rmmod-intel-tco-watchdog'],
@@ -130,7 +156,7 @@ class role_watchdog (
         }
         $module_to_load = 'ipmi_watchdog'
       } else {
-        if (!::is_virtual and downcase($::processor0) =~ /^intel/) {
+        if (!$is_virtual and downcase($processor_0_model) =~ /^intel/) {
           $module_to_load = 'iTCO_wdt'
         } else {
           $module_to_load = 'softdog'
@@ -139,17 +165,17 @@ class role_watchdog (
     }
 
     'tco': {
-      if ($::is_virtual) {
+      if ($is_virtual) {
         fail('Intel TCO watchdog is not supported on virtual machines')
       }
-      if (downcase($::processor0) !~ /^intel/) {
+      if (downcase($processor_0_model) !~ /^intel/) {
         fail('Intel TCO watchdog is not supported on non-Intel machines')
       }
       $module_to_load = 'iTCO_wdt'
     }
 
     'soft': {
-      if (!::is_virtual and downcase($::processor0) =~ /^intel/) {
+      if (!$is_virtual and downcase($processor_0_model) =~ /^intel/) {
         file { '/etc/modprobe.d/puppet-disable-intel-tco-watchdog.conf':
           content => "blacklist iTCO_wdt\n",
           notify  => Exec['rmmod-intel-tco-watchdog'],
@@ -169,18 +195,18 @@ class role_watchdog (
   # point to a non-existing device but this option does not exist on
   # RedHat 7
   exec { 'systemd-daemon-reexec-after-changing-watchdog':
-    path        => $::path,
+    path        => $path,
     command     => 'systemctl daemon-reexec',
     refreshonly => true,
   }
   exec { 'release-watchdog-from-systemd':
-    path    => $::path,
+    path    => $path,
     command => "sed -i 's!^#*RuntimeWatchdogSec=.*$!RuntimeWatchdogSec=0!' /etc/systemd/system.conf",
     unless  => "grep -q '^RuntimeWatchdogSec=0$' /etc/systemd/system.conf",
     notify  => Exec['systemd-daemon-reexec-after-changing-watchdog'],
   }
   exec { 'release-watchdog-from-systemd-2':
-    path    => $::path,
+    path    => $path,
     command => "sed -i 's!^#*WatchdogDevice=.*$!WatchdogDevice=/dev/non-existent-watchdog!' /etc/systemd/system.conf",
     unless  => "grep -q '^WatchdogDevice=/dev/non-existent-watchdog$' /etc/systemd/system.conf",
     onlyif  => "grep -q 'WatchdogDevice=' /etc/systemd/system.conf",
@@ -188,7 +214,7 @@ class role_watchdog (
   }
 
   # Deploy watchdog configuration and enable service
-  case $::osfamily {
+  case $os_family {
 
     'Debian': {
         # Kernel module to load
@@ -208,14 +234,14 @@ class role_watchdog (
     }
 
     default: {
-      fail("Unsupported OS family ${::osfamily}, only Debian/RedHat supported")
+      fail("Unsupported OS family \"${os_family}\", only Debian/RedHat supported")
     }
 
   }
 
   # Compute total memory in bytes
   if ($min_mem_percent) {
-    $min_free_mem_bytes = Integer($::memory['system']['total_bytes'] * $min_mem_percent / 100)
+    $min_free_mem_bytes = Integer($memory_system_total_bytes * $min_mem_percent / 100)
     $min_free_pages = Integer($min_free_mem_bytes / $::default_page_size)
   }
 
