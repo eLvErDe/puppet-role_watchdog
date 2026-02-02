@@ -89,7 +89,6 @@ class role_watchdog (
   $has_path_fact = ($::facts != undef and $::facts['path'] != undef)
   $has_is_virtual_fact = ($::facts != undef and $::facts['is_virtual'] != undef)
   $has_architecture_fact = ($::facts != undef and $::facts['architecture'] != undef)
-  $has_ipmi_support_fact = ($::facts != undef and $::facts['ipmi_support'] != undef)
   $has_processors_facts = ($::facts != undef and $::facts['processors'] != undef)
   $has_processors_models_fact = ($has_processors_facts != undef and $::facts['processors']['models'] != undef)
   $has_processors_cores_fact = ($has_processors_facts != undef and $::facts['processors']['cores'] != undef)
@@ -105,12 +104,11 @@ class role_watchdog (
   $path = $has_path_fact ? { false => $::path, default => $::facts['path'] }
   $is_virtual = $has_is_virtual_fact ? { false => $::is_virtual, default => $::facts['is_virtual'] }
   $architecture = $has_os_hardware_fact ? { false => $::hardwaremodel, default => $::facts['os']['hardware'] }
-  $ipmi_support = $has_ipmi_support_fact ? { false => $::ipmi_support, default => $::facts['ipmi_support'] }
   $processor_0_model = $has_processors_models_fact ? { false => $::processor0, default => $::facts['processors']['models'][0] }
   $cores_count = $has_processors_cores_fact ? { false => $::processorcount, default => $::facts['processors']['cores'] }
   $memory_system_total_bytes = $has_memory_system_total_bytes_fact ? { false => $::memory['system']['total_bytes'], default => $::facts['memory']['system']['total_bytes'] }
 
-  # fail("path=${path} is_virtual=${is_virtual} architecture=${architecture} ipmi_support=${ipmi_support} processor_0_model=${processor_0_model} cores_count=${cores_count} memory_system_total_bytes=${memory_system_total_bytes}")
+  #fail("path=${path} is_virtual=${is_virtual} architecture=${architecture} ipmi_support=${ipmi_support} processor_0_model=${processor_0_model} cores_count=${cores_count} memory_system_total_bytes=${memory_system_total_bytes}")
 
   # Ensure dmidecode is preset, otherwise fact detecting IPMI support may fail
   if (!$is_virtual and $architecture in ['x86_64']) {
